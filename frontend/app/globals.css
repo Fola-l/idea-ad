@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 9, 9, 11;
+  --background-mid-rgb: 15, 23, 42;
+  --background-end-rgb: 9, 9, 11;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(14, 165, 233, 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(99, 102, 241, 0.1), transparent),
+    linear-gradient(
+      to bottom,
+      rgb(var(--background-start-rgb)),
+      rgb(var(--background-mid-rgb)) 50%,
+      rgb(var(--background-end-rgb))
+    );
+  min-height: 100vh;
+  background-attachment: fixed;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-medium py-2.5 px-5 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/20 hover:shadow-primary-500/30 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .btn-secondary {
+    @apply bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 px-5 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-600 hover:border-slate-500;
+  }
+
+  .input {
+    @apply w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all duration-200;
+  }
+
+  .textarea {
+    @apply w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 resize-none transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-2xl p-6 shadow-xl shadow-black/20;
+  }
+
+  .card-elevated {
+    @apply bg-gradient-to-b from-slate-800/80 to-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6 shadow-2xl shadow-black/30;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-slate-200 rounded-full text-sm border border-slate-700 hover:border-slate-600 transition-colors;
+  }
+
+  .chip-remove {
+    @apply ml-1 text-slate-400 hover:text-red-400 cursor-pointer transition-colors;
+  }
+
+  /* Currency input - no spinners */
+  .input-currency {
+    @apply w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 transition-all duration-200;
+    -moz-appearance: textfield;
+  }
+
+  .input-currency::-webkit-outer-spin-button,
+  .input-currency::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Budget display card */
+  .budget-summary {
+    @apply bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-slate-700/50 rounded-xl p-4 shadow-inner;
+  }
+
+  .budget-error {
+    @apply bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm backdrop-blur-sm;
+  }
+
+  .budget-warning {
+    @apply bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-yellow-400 text-sm backdrop-blur-sm;
+  }
+
+  .budget-success {
+    @apply bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-green-400 text-sm backdrop-blur-sm;
+  }
+
+  /* Section headers */
+  .section-title {
+    @apply text-lg font-semibold text-white flex items-center gap-2;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-slate-400 mt-1;
+  }
+
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: 0 0 40px rgba(14, 165, 233, 0.15);
+  }
+
+  .glow-border {
+    @apply relative;
+  }
+
+  .glow-border::before {
+    content: '';
+    @apply absolute -inset-0.5 rounded-2xl opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(99, 102, 241, 0.4));
+    z-index: -1;
+    filter: blur(8px);
+  }
+
+  .glow-border:hover::before {
+    @apply opacity-100;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(30, 41, 59);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(71, 85, 105);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(100, 116, 139);
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s ease-in-out infinite;
+}

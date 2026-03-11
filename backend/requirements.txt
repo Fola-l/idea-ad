@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+httpx
+anthropic
+openai
+supabase
+python-multipart
+python-dotenv
+ffmpeg-python
+Pillow
+pydantic
+pydantic-settings
