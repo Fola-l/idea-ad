@@ -380,10 +380,33 @@ class MetaClient:
         """Build Meta targeting specification."""
         core = audience.core_audience
 
+        # Build geo_locations - cities and countries are mutually exclusive
+        # If we have resolved cities, use cities only (country is implied)
+        # Otherwise fall back to country-level targeting
+        geo_locations = {}
+
+        if core.geo_locations.cities and not skip_city_targeting:
+            valid_cities = [
+                {
+                    "key": city.key,
+                    "radius": city.radius or 25,
+                    "distance_unit": "kilometer"  # Always kilometer, never mile
+                }
+                for city in core.geo_locations.cities
+                if city.key and city.key.isdigit()
+            ]
+            if valid_cities:
+                # Cities only - country is implied by the city
+                geo_locations["cities"] = valid_cities
+            else:
+                # No valid cities resolved - fall back to country
+                geo_locations["countries"] = core.geo_locations.countries
+        else:
+            # No cities or city targeting skipped - use country only
+            geo_locations["countries"] = core.geo_locations.countries
+
         targeting = {
-            "geo_locations": {
-                "countries": core.geo_locations.countries
-            },
+            "geo_locations": geo_locations,
             "publisher_platforms": ["facebook", "audience_network"],
             "facebook_positions": ["feed"],
             # Required since API v23.0 - set to 0 to use specific targeting
@@ -401,22 +424,6 @@ class MetaClient:
         # Add genders if specified
         if core.genders and core.genders != [1, 2]:
             targeting["genders"] = core.genders
-
-        # Add city targeting if specified and supported
-        # Will be skipped if Meta returns error 1487479 (city targeting not supported)
-        # Only include cities with valid numeric keys
-        if core.geo_locations.cities and not skip_city_targeting:
-            valid_cities = [
-                {
-                    "key": city.key,
-                    "radius": city.radius or 25,
-                    "distance_unit": city.distance_unit or "kilometer"
-                }
-                for city in core.geo_locations.cities
-                if city.key and city.key.isdigit()
-            ]
-            if valid_cities:
-                targeting["geo_locations"]["cities"] = valid_cities
 
         # Add interests (using resolved IDs)
         if resolved_interests:
