@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Upload, ChevronDown, ChevronUp, Loader2, Zap, Target, TrendingUp } from 'lucide-react';
+import { Sparkles, Upload, ChevronDown, ChevronUp, Loader2, Zap, Target, TrendingUp, X } from 'lucide-react';
 import { generateAd, generateCreative } from '@/lib/api';
+import { uploadFile } from '@/lib/storage';
 
 const LOADING_MESSAGES = [
   'Analyzing your prompt...',
@@ -35,6 +36,54 @@ export default function Home() {
   const [demoImageUrl, setDemoImageUrl] = useState('');
   const [demoVideoUrl, setDemoVideoUrl] = useState('');
   const [brandColors, setBrandColors] = useState<string[]>(['#0ea5e9']);
+
+  // File upload state
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState<{ logo?: boolean; image?: boolean; video?: boolean }>({});
+
+  const handleFileUpload = async (file: File, type: 'logo' | 'image' | 'video') => {
+    setUploading({ ...uploading, [type]: true });
+    try {
+      const url = await uploadFile(file, type);
+
+      if (type === 'logo') {
+        setLogoUrl(url);
+        setLogoFile(file);
+      } else if (type === 'image') {
+        setDemoImageUrl(url);
+        setImageFile(file);
+      } else {
+        setDemoVideoUrl(url);
+        setVideoFile(file);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading({ ...uploading, [type]: false });
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'image' | 'video') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleFileUpload(file, type);
+    }
+  };
+
+  const removeFile = (type: 'logo' | 'image' | 'video') => {
+    if (type === 'logo') {
+      setLogoFile(null);
+      setLogoUrl('');
+    } else if (type === 'image') {
+      setImageFile(null);
+      setDemoImageUrl('');
+    } else {
+      setVideoFile(null);
+      setDemoVideoUrl('');
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -160,46 +209,112 @@ export default function Home() {
         {/* Brand Assets Section */}
         {showAssets && (
           <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg mb-6">
+            {/* Logo Upload */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Logo URL
+                Logo
               </label>
-              <input
-                type="url"
-                className="input"
-                placeholder="https://example.com/logo.png"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                disabled={loading}
-              />
+              {!logoFile ? (
+                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg cursor-pointer transition-colors">
+                  <Upload className="w-4 h-4 text-slate-400" />
+                  <span className="text-slate-400 text-sm">
+                    {uploading.logo ? 'Uploading...' : 'Upload logo (PNG, JPG, max 5MB)'}
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={(e) => handleFileChange(e, 'logo')}
+                    disabled={loading || uploading.logo}
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-green-400" />
+                    <span className="text-slate-300 text-sm">{logoFile.name}</span>
+                  </div>
+                  <button
+                    onClick={() => removeFile('logo')}
+                    className="text-slate-400 hover:text-red-400 transition-colors"
+                    disabled={loading}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
+            {/* Product Image Upload */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Product Image URL
+                Product Image
               </label>
-              <input
-                type="url"
-                className="input"
-                placeholder="https://example.com/product.jpg"
-                value={demoImageUrl}
-                onChange={(e) => setDemoImageUrl(e.target.value)}
-                disabled={loading}
-              />
+              {!imageFile ? (
+                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg cursor-pointer transition-colors">
+                  <Upload className="w-4 h-4 text-slate-400" />
+                  <span className="text-slate-400 text-sm">
+                    {uploading.image ? 'Uploading...' : 'Upload image (PNG, JPG, max 10MB)'}
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={(e) => handleFileChange(e, 'image')}
+                    disabled={loading || uploading.image}
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-green-400" />
+                    <span className="text-slate-300 text-sm">{imageFile.name}</span>
+                  </div>
+                  <button
+                    onClick={() => removeFile('image')}
+                    className="text-slate-400 hover:text-red-400 transition-colors"
+                    disabled={loading}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
+            {/* Demo Video Upload */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Demo Video URL
+                Demo Video
               </label>
-              <input
-                type="url"
-                className="input"
-                placeholder="https://example.com/demo.mp4"
-                value={demoVideoUrl}
-                onChange={(e) => setDemoVideoUrl(e.target.value)}
-                disabled={loading}
-              />
+              {!videoFile ? (
+                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg cursor-pointer transition-colors">
+                  <Upload className="w-4 h-4 text-slate-400" />
+                  <span className="text-slate-400 text-sm">
+                    {uploading.video ? 'Uploading...' : 'Upload video (MP4, max 50MB)'}
+                  </span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="video/mp4,video/quicktime,video/x-msvideo,video/webm"
+                    onChange={(e) => handleFileChange(e, 'video')}
+                    disabled={loading || uploading.video}
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-green-400" />
+                    <span className="text-slate-300 text-sm">{videoFile.name}</span>
+                  </div>
+                  <button
+                    onClick={() => removeFile('video')}
+                    className="text-slate-400 hover:text-red-400 transition-colors"
+                    disabled={loading}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>

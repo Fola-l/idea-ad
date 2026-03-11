@@ -1,5 +1,5 @@
 import uuid
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -13,7 +13,7 @@ from app.services.claude_orchestrator import ClaudeOrchestrator, fetch_image_as_
 from app.services.creative_pipeline import CreativePipeline
 from app.services.meta_client import MetaClient, MetaAPIError
 from app.db.supabase_client import (
-    create_ad_run, get_ad_run, update_ad_run, list_ad_runs
+    create_ad_run, get_ad_run, update_ad_run, list_ad_runs, upload_file
 )
 
 
@@ -53,6 +53,69 @@ meta_client = MetaClient()
 async def health_check():
     """Health check endpoint for uptime monitoring."""
     return {"status": "ok", "service": "idea-ad"}
+
+
+@app.post("/api/upload")
+async def upload_asset(
+    file: UploadFile = File(...),
+    type: str = Form(...)
+):
+    """
+    Upload brand asset (logo, image, or video) to Supabase Storage.
+
+    Args:
+        file: The file to upload
+        type: Asset type - 'logo', 'image', or 'video'
+
+    Returns:
+        JSON with the public URL of the uploaded file
+    """
+    # Validate file type
+    allowed_types = {
+        'logo': ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+        'image': ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+        'video': ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm']
+    }
+
+    if type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Invalid type. Must be one of: logo, image, video")
+
+    if file.content_type not in allowed_types[type]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type for {type}. Allowed: {', '.join(allowed_types[type])}"
+        )
+
+    # Validate file size (5MB for logos, 10MB for images, 50MB for videos)
+    max_sizes = {'logo': 5 * 1024 * 1024, 'image': 10 * 1024 * 1024, 'video': 50 * 1024 * 1024}
+    file_data = await file.read()
+    if len(file_data) > max_sizes[type]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large. Max size for {type}: {max_sizes[type] / (1024*1024):.0f}MB"
+        )
+
+    try:
+        # Generate unique filename
+        file_extension = file.filename.split('.')[-1] if '.' in file.filename else ''
+        unique_filename = f"{uuid.uuid4()}.{file_extension}" if file_extension else str(uuid.uuid4())
+
+        # Upload to appropriate bucket
+        bucket_name = f"brand-assets-{type}s"  # logos, images, videos
+        file_path = unique_filename
+
+        # Upload to Supabase Storage
+        public_url = await upload_file(
+            bucket=bucket_name,
+            path=file_path,
+            file_data=file_data,
+            content_type=file.content_type
+        )
+
+        return {"url": public_url, "type": type, "filename": file.filename}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 
 @app.post("/api/generate", response_model=GenerateResponse)
