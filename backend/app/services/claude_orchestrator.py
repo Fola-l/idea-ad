@@ -176,24 +176,76 @@ Return ONLY the JSON response with no additional text."""
 
         messages.append({"role": "user", "content": content})
 
-        # Call Claude API
-        response = self.client.messages.create(
+        # Call 1: Generate structured strategy (temperature=0.2 for consistency)
+        strategy_response = self.client.messages.create(
             model=self.model,
             max_tokens=4096,
+            temperature=0.2,
             system=SYSTEM_PROMPT,
             messages=messages
         )
 
-        # Parse response
-        response_text = response.content[0].text.strip()
+        # Parse strategy response
+        strategy_text = strategy_response.content[0].text.strip()
 
         # Remove markdown code blocks if present
-        if response_text.startswith("```"):
-            lines = response_text.split("\n")
-            response_text = "\n".join(lines[1:-1])
+        if strategy_text.startswith("```"):
+            lines = strategy_text.split("\n")
+            strategy_text = "\n".join(lines[1:-1])
 
         # Parse JSON
-        strategy_data = json.loads(response_text)
+        strategy_data = json.loads(strategy_text)
+
+        # Call 2: Generate creative copy (temperature=0.7 for creativity)
+        # Extract key info for creative generation
+        product_desc = prompt[:500]  # First 500 chars for context
+        format_type = strategy_data.get("format", "image")
+        objective = strategy_data.get("campaign", {}).get("objective", "OUTCOME_TRAFFIC")
+
+        creative_prompt = f"""Based on this product/service description:
+
+{product_desc}
+
+And this campaign strategy:
+- Format: {format_type}
+- Objective: {objective}
+
+Generate engaging ad creative:
+
+Return ONLY valid JSON in this exact format:
+{{
+  "headline": "max 40 chars, punchy, scroll-stopping",
+  "body": "max 125 chars, benefit-focused",
+  "cta": "LEARN_MORE | SHOP_NOW | SIGN_UP | GET_QUOTE | DOWNLOAD",
+  "voiceover_script": "15-30 second script, conversational, ends with CTA"
+}}
+
+Rules:
+- Headline should grab attention and create curiosity
+- Body should focus on outcome/benefit, not features
+- Voiceover should be natural and conversational
+- Match the tone implied in the product description"""
+
+        creative_response = self.client.messages.create(
+            model=self.model,
+            max_tokens=1024,
+            temperature=0.7,
+            messages=[{"role": "user", "content": creative_prompt}]
+        )
+
+        # Parse creative response
+        creative_text = creative_response.content[0].text.strip()
+        if creative_text.startswith("```"):
+            lines = creative_text.split("\n")
+            creative_text = "\n".join(lines[1:-1])
+
+        creative_data = json.loads(creative_text)
+
+        # Merge creative data into strategy
+        strategy_data["ad_copy"]["headline"] = creative_data["headline"]
+        strategy_data["ad_copy"]["body"] = creative_data["body"]
+        strategy_data["ad_copy"]["cta"] = creative_data["cta"]
+        strategy_data["voiceover_script"] = creative_data["voiceover_script"]
 
         # Convert to Pydantic model
         return self._parse_strategy(strategy_data, destination_url)

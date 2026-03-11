@@ -754,7 +754,7 @@ class MetaClient:
         # Check if this request has complex nested data (like targeting)
         # If so, send as JSON instead of form-encoded
         has_complex_data = any(
-            key in data for key in ["targeting", "object_story_spec"]
+            key in data for key in ["targeting", "object_story_spec", "creative"]
         )
 
         if has_complex_data:
