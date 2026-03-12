@@ -8,6 +8,8 @@ import {
   AlertCircle,
   X,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import {
   getPreview,
@@ -53,6 +55,11 @@ export default function PreviewPage() {
   const [regeneratingVoiceover, setRegeneratingVoiceover] = useState(false);
   const [sandboxMode, setSandboxMode] = useState(true);
   const [showDeployModal, setShowDeployModal] = useState(false);
+
+  // Collapsible section state
+  const [showAdCopy, setShowAdCopy] = useState(true);
+  const [showAudience, setShowAudience] = useState(true);
+  const [showCampaignSettings, setShowCampaignSettings] = useState(true);
 
   // Editable state
   const [adCopy, setAdCopy] = useState<AdCopy>({
@@ -290,76 +297,113 @@ export default function PreviewPage() {
         <div className="space-y-5">
         {/* Ad Copy */}
         <div className="card">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </div>
-            <h2 className="text-lg font-semibold text-white">Ad Copy</h2>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-slate-300">Headline</label>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${adCopy.headline.length >= 35 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
-                  {adCopy.headline.length}/40
-                </span>
+          <button
+            type="button"
+            className="flex items-center justify-between w-full mb-5 group"
+            onClick={() => setShowAdCopy(!showAdCopy)}
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
               </div>
-              <input
-                type="text"
-                className="input"
-                value={adCopy.headline}
-                onChange={(e) =>
-                  setAdCopy({ ...adCopy, headline: e.target.value.slice(0, 40) })
-                }
-                maxLength={40}
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-slate-300">Body</label>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${adCopy.body.length >= 110 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
-                  {adCopy.body.length}/125
+              <h2 className="text-lg font-semibold text-white">Ad Copy</h2>
+              {!showAdCopy && (
+                <span className="text-xs text-slate-500">
+                  • Headline • Body • CTA
                 </span>
-              </div>
-              <textarea
-                className="textarea h-24"
-                value={adCopy.body}
-                onChange={(e) =>
-                  setAdCopy({ ...adCopy, body: e.target.value.slice(0, 125) })
-                }
-                maxLength={125}
-              />
+              )}
             </div>
+            {showAdCopy ? (
+              <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+            )}
+          </button>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Call to Action
-              </label>
-              <select
-                className="input"
-                value={adCopy.cta}
-                onChange={(e) => setAdCopy({ ...adCopy, cta: e.target.value })}
-              >
-                {CTA_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+          {showAdCopy && (
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-300">Headline</label>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${adCopy.headline.length >= 35 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
+                    {adCopy.headline.length}/40
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  className="input"
+                  value={adCopy.headline}
+                  onChange={(e) =>
+                    setAdCopy({ ...adCopy, headline: e.target.value.slice(0, 40) })
+                  }
+                  maxLength={40}
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-300">Body</label>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${adCopy.body.length >= 110 ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-800 text-slate-500'}`}>
+                    {adCopy.body.length}/125
+                  </span>
+                </div>
+                <textarea
+                  className="textarea h-24"
+                  value={adCopy.body}
+                  onChange={(e) =>
+                    setAdCopy({ ...adCopy, body: e.target.value.slice(0, 125) })
+                  }
+                  maxLength={125}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Call to Action
+                </label>
+                <select
+                  className="input"
+                  value={adCopy.cta}
+                  onChange={(e) => setAdCopy({ ...adCopy, cta: e.target.value })}
+                >
+                  {CTA_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Audience */}
         {audience && (
           <div className="card">
-            <h2 className="text-lg font-semibold text-white mb-4">Audience</h2>
+            <button
+              type="button"
+              className="flex items-center justify-between w-full mb-4 group"
+              onClick={() => setShowAudience(!showAudience)}
+            >
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-white">Audience</h2>
+                {!showAudience && (
+                  <span className="text-xs text-slate-500">
+                    • Ages {audience.core_audience.age_min}-{audience.core_audience.age_max} • {audience.interests.length} interests
+                  </span>
+                )}
+              </div>
+              {showAudience ? (
+                <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+              )}
+            </button>
 
-            <div className="space-y-4">
+            {showAudience && (
+              <div className="space-y-4">
               {/* Age Range */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -436,6 +480,7 @@ export default function PreviewPage() {
                 </p>
               </div>
             </div>
+            )}
           </div>
         )}
 
@@ -448,13 +493,32 @@ export default function PreviewPage() {
 
           return (
             <div className="card">
-              <h2 className="text-lg font-semibold text-white mb-4">Campaign Settings</h2>
+              <button
+                type="button"
+                className="flex items-center justify-between w-full mb-4 group"
+                onClick={() => setShowCampaignSettings(!showCampaignSettings)}
+              >
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-white">Campaign Settings</h2>
+                  {!showCampaignSettings && (
+                    <span className="text-xs text-slate-500">
+                      • {CURRENCY_SYMBOL}{lifetimeBudget.toLocaleString()} • {campaignSettings.duration_days} days
+                    </span>
+                  )}
+                </div>
+                {showCampaignSettings ? (
+                  <ChevronUp className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+                )}
+              </button>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Objective
-                  </label>
+              {showCampaignSettings && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Objective
+                    </label>
                   <select
                     className="input"
                     value={campaignSettings.objective}
@@ -470,107 +534,108 @@ export default function PreviewPage() {
                         {opt.label}
                       </option>
                     ))}
-                  </select>
-                </div>
-
-                {/* Budget Section */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">
-                        Daily Budget ({CURRENCY_CODE})
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
-                          {CURRENCY_SYMBOL}
-                        </span>
-                        <input
-                          type="number"
-                          className="input-currency pl-8"
-                          value={campaignSettings.daily_budget}
-                          onChange={(e) =>
-                            setCampaignSettings({
-                              ...campaignSettings,
-                              daily_budget: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                          min={1}
-                          step={1000}
-                          placeholder="e.g. 25000"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">
-                        Duration
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          className="input pr-14"
-                          value={campaignSettings.duration_days}
-                          onChange={(e) =>
-                            setCampaignSettings({
-                              ...campaignSettings,
-                              duration_days: parseInt(e.target.value) || 1,
-                            })
-                          }
-                          min={1}
-                          max={30}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
-                          days
-                        </span>
-                      </div>
-                    </div>
+                    </select>
                   </div>
 
-                  {/* Budget Summary */}
-                  <div className="budget-summary">
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-400 text-sm">Lifetime Budget</span>
-                      <span className={`text-lg font-semibold ${isBudgetValid ? 'text-white' : 'text-red-400'}`}>
-                        {CURRENCY_SYMBOL}{lifetimeBudget.toLocaleString()}
-                      </span>
+                  {/* Budget Section */}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                          Daily Budget ({CURRENCY_CODE})
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                            {CURRENCY_SYMBOL}
+                          </span>
+                          <input
+                            type="number"
+                            className="input-currency pl-8"
+                            value={campaignSettings.daily_budget}
+                            onChange={(e) =>
+                              setCampaignSettings({
+                                ...campaignSettings,
+                                daily_budget: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            min={1}
+                            step={1000}
+                            placeholder="e.g. 25000"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                          Duration
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            className="input pr-14"
+                            value={campaignSettings.duration_days}
+                            onChange={(e) =>
+                              setCampaignSettings({
+                                ...campaignSettings,
+                                duration_days: parseInt(e.target.value) || 1,
+                              })
+                            }
+                            min={1}
+                            max={30}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                            days
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-slate-500 text-xs">Minimum required</span>
-                      <span className="text-slate-500 text-xs">
-                        {CURRENCY_SYMBOL}{MIN_LIFETIME_BUDGET_NGN.toLocaleString()}
-                      </span>
+
+                    {/* Budget Summary */}
+                    <div className="budget-summary">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-sm">Lifetime Budget</span>
+                        <span className={`text-lg font-semibold ${isBudgetValid ? 'text-white' : 'text-red-400'}`}>
+                          {CURRENCY_SYMBOL}{lifetimeBudget.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-slate-500 text-xs">Minimum required</span>
+                        <span className="text-slate-500 text-xs">
+                          {CURRENCY_SYMBOL}{MIN_LIFETIME_BUDGET_NGN.toLocaleString()}
+                        </span>
+                      </div>
                     </div>
+
+                    {/* Budget Validation Message */}
+                    {!isBudgetValid && (
+                      <div className="budget-error">
+                        <p className="font-medium">Budget too low</p>
+                        <p className="mt-1">
+                          You need {CURRENCY_SYMBOL}{budgetShortfall.toLocaleString()} more.
+                          Try setting daily budget to {CURRENCY_SYMBOL}{suggestedDaily.toLocaleString()} or increase duration.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Budget Validation Message */}
-                  {!isBudgetValid && (
-                    <div className="budget-error">
-                      <p className="font-medium">Budget too low</p>
-                      <p className="mt-1">
-                        You need {CURRENCY_SYMBOL}{budgetShortfall.toLocaleString()} more.
-                        Try setting daily budget to {CURRENCY_SYMBOL}{suggestedDaily.toLocaleString()} or increase duration.
-                      </p>
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
+                      Destination URL
+                    </label>
+                    <input
+                      type="url"
+                      className="input"
+                      value={campaignSettings.destination_url}
+                      onChange={(e) =>
+                        setCampaignSettings({
+                          ...campaignSettings,
+                          destination_url: e.target.value,
+                        })
+                      }
+                      placeholder="https://yourproduct.com"
+                    />
+                  </div>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">
-                    Destination URL
-                  </label>
-                  <input
-                    type="url"
-                    className="input"
-                    value={campaignSettings.destination_url}
-                    onChange={(e) =>
-                      setCampaignSettings({
-                        ...campaignSettings,
-                        destination_url: e.target.value,
-                      })
-                    }
-                    placeholder="https://yourproduct.com"
-                  />
-                </div>
-              </div>
+              )}
             </div>
           );
         })()}

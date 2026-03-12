@@ -27,6 +27,7 @@ export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [destinationUrl, setDestinationUrl] = useState('');
   const [showAssets, setShowAssets] = useState(false);
+  const [showExamples, setShowExamples] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
@@ -380,34 +381,48 @@ export default function Home() {
 
       {/* Example Prompts */}
       <div className="mt-10">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
-          <span className="text-sm font-medium text-slate-500 px-3">Try an example</span>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
-        </div>
-        <div className="grid gap-3">
-          {[
-            { text: 'Promote the AI assistant builder to startup founders who use no-code tools. Punchy tone. ₦25,000/day for 5 days.', tag: 'SaaS' },
-            { text: 'Advertise the productivity app to remote workers and freelancers. Professional tone. ₦30,000/day for 4 days.', tag: 'App' },
-            { text: 'Launch campaign for delivery API targeting e-commerce developers. Technical tone. ₦22,000/day for 5 days.', tag: 'API' },
-          ].map((example, index) => (
-            <button
-              key={index}
-              className="group w-full text-left p-4 rounded-xl bg-slate-900/50 hover:bg-slate-800/70 border border-slate-800 hover:border-slate-700 text-slate-300 text-sm transition-all"
-              onClick={() => setPrompt(example.text)}
-              disabled={loading}
-            >
-              <div className="flex items-start gap-3">
-                <span className="shrink-0 px-2 py-1 rounded-md bg-slate-800 text-xs font-medium text-slate-400 group-hover:bg-primary-500/20 group-hover:text-primary-400 transition-colors">
-                  {example.tag}
-                </span>
-                <span className="text-slate-400 group-hover:text-slate-300 transition-colors">
-                  {example.text}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+        <button
+          type="button"
+          className="flex items-center justify-center gap-2 w-full py-3 text-slate-400 hover:text-slate-300 transition-colors group"
+          onClick={() => setShowExamples(!showExamples)}
+        >
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-700 to-transparent group-hover:via-slate-600 transition-colors" />
+          <span className="text-sm font-medium flex items-center gap-2">
+            {showExamples ? 'Try an example' : 'See examples'}
+            {showExamples ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-700 to-transparent group-hover:via-slate-600 transition-colors" />
+        </button>
+
+        {showExamples && (
+          <div className="grid gap-3 mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            {[
+              { text: 'Promote the AI assistant builder to startup founders who use no-code tools. Punchy tone. ₦25,000/day for 5 days.', tag: 'SaaS' },
+              { text: 'Advertise the productivity app to remote workers and freelancers. Professional tone. ₦30,000/day for 4 days.', tag: 'App' },
+              { text: 'Launch campaign for delivery API targeting e-commerce developers. Technical tone. ₦22,000/day for 5 days.', tag: 'API' },
+            ].map((example, index) => (
+              <button
+                key={index}
+                className="group w-full text-left p-4 rounded-xl bg-slate-900/50 hover:bg-slate-800/70 border border-slate-800 hover:border-slate-700 text-slate-300 text-sm transition-all"
+                onClick={() => setPrompt(example.text)}
+                disabled={loading}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="shrink-0 px-2 py-1 rounded-md bg-slate-800 text-xs font-medium text-slate-400 group-hover:bg-primary-500/20 group-hover:text-primary-400 transition-colors">
+                    {example.tag}
+                  </span>
+                  <span className="text-slate-400 group-hover:text-slate-300 transition-colors">
+                    {example.text}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
