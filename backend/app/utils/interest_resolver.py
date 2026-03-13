@@ -78,10 +78,11 @@ class InterestResolver:
         Find the best matching interest from search results using similarity scoring.
 
         Priority:
-        1. Exact name match (case-insensitive)
-        2. Query is substring of result name
-        3. Result name is substring of query
-        4. First result with meaningful audience (>50k)
+        1. Filter by minimum audience size (100k+) to exclude brand-specific interests
+        2. Exact name match (case-insensitive)
+        3. Query is substring of result name
+        4. Result name is substring of query
+        5. First result with meaningful audience
 
         Args:
             query: Original search query
@@ -93,28 +94,37 @@ class InterestResolver:
         if not results:
             return None
 
-        query_lower = query.lower()
+        query_lower = query.lower().strip()
+
+        # Filter out results with very small audiences first (brand-specific interests)
+        MIN_AUDIENCE_SIZE = 100_000
+
+        qualified = [
+            r for r in results
+            if r.get("audience_size_lower_bound", 0) >= MIN_AUDIENCE_SIZE
+        ]
+
+        # Use qualified results if any, otherwise fall back to all results
+        search_pool = qualified if qualified else results
 
         # Priority 1: Exact match
-        for result in results:
+        for result in search_pool:
             if result["name"].lower() == query_lower:
                 return result
 
         # Priority 2: Query is substring of result name
-        for result in results:
+        for result in search_pool:
             if query_lower in result["name"].lower():
                 return result
 
         # Priority 3: Result name is substring of query
-        for result in results:
+        for result in search_pool:
             if result["name"].lower() in query_lower:
                 return result
 
         # Priority 4: First result with meaningful audience
-        first = results[0]
-        audience_size = first.get("audience_size_lower_bound", 0)
-        if audience_size > 50000:
-            return first
+        if search_pool:
+            return search_pool[0]
 
         # Skip if no good match found
         return None

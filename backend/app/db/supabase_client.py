@@ -97,6 +97,13 @@ async def cache_interest(
     return result.data[0] if result.data else {}
 
 
+async def clear_interest_cache() -> int:
+    """Clear all cached interests. Returns number of deleted records."""
+    db = get_db()
+    result = db.table("interest_cache").delete().neq("interest_name", "").execute()
+    return len(result.data) if result.data else 0
+
+
 # Storage Operations
 async def upload_file(
     bucket: str,
