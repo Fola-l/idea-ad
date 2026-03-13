@@ -23,6 +23,16 @@ class Settings(BaseSettings):
     sandbox_mode: bool = True
     currency_symbol: str = "₦"  # NGN (Naira), change to £ for GBP, $ for USD
 
+    # Brand Settings (Send247)
+    brand_name: str = "Send247"
+    brand_url: str = "https://send247.uk/"
+    brand_description: str = "Modern on-demand courier and logistics platform"
+    brand_font: str = "Jetbrains Mono"
+    brand_primary_color: str = "#00E676"
+    brand_dark_bg: str = "#0F0F0F"
+    brand_light_bg: str = "#FFFFFF"
+    brand_theme: str = "Modern minimalist courier logistics UI"
+
     # Optional
     elevenlabs_api_key: str = ""
 

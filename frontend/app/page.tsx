@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Upload, ChevronDown, ChevronUp, Loader2, Zap, Target, TrendingUp, X } from 'lucide-react';
+import { Sparkles, ChevronDown, ChevronUp, Loader2, Zap, Target, TrendingUp, Settings } from 'lucide-react';
 import { generateAd, generateCreative } from '@/lib/api';
-import { uploadFile } from '@/lib/storage';
 
 const LOADING_MESSAGES = [
   'Analyzing your prompt...',
@@ -22,69 +21,32 @@ const FEATURES = [
   { icon: TrendingUp, title: 'One-Click Deploy', desc: 'Direct to Meta Ads' },
 ];
 
+const OBJECTIVE_OPTIONS = [
+  { value: 'OUTCOME_TRAFFIC', label: 'Traffic' },
+  { value: 'OUTCOME_AWARENESS', label: 'Awareness' },
+  { value: 'OUTCOME_LEADS', label: 'Leads' },
+  { value: 'LINK_CLICKS', label: 'Link Clicks' },
+];
+
+// Minimum lifetime budget in NGN (₦108,300 = 10,830,000 kobo)
+const MIN_LIFETIME_BUDGET_NGN = 108_300;
+const CURRENCY_SYMBOL = '₦';
+const CURRENCY_CODE = 'NGN';
+
 export default function Home() {
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
-  const [destinationUrl, setDestinationUrl] = useState('');
-  const [showAssets, setShowAssets] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
+  const [showCampaignSettings, setShowCampaignSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
 
-  // Brand assets state
-  const [logoUrl, setLogoUrl] = useState('');
-  const [demoImageUrl, setDemoImageUrl] = useState('');
-  const [demoVideoUrl, setDemoVideoUrl] = useState('');
-  const [brandColors, setBrandColors] = useState<string[]>(['#0ea5e9']);
-
-  // File upload state
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState<{ logo?: boolean; image?: boolean; video?: boolean }>({});
-
-  const handleFileUpload = async (file: File, type: 'logo' | 'image' | 'video') => {
-    setUploading({ ...uploading, [type]: true });
-    try {
-      const url = await uploadFile(file, type);
-
-      if (type === 'logo') {
-        setLogoUrl(url);
-        setLogoFile(file);
-      } else if (type === 'image') {
-        setDemoImageUrl(url);
-        setImageFile(file);
-      } else {
-        setDemoVideoUrl(url);
-        setVideoFile(file);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setUploading({ ...uploading, [type]: false });
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'image' | 'video') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      await handleFileUpload(file, type);
-    }
-  };
-
-  const removeFile = (type: 'logo' | 'image' | 'video') => {
-    if (type === 'logo') {
-      setLogoFile(null);
-      setLogoUrl('');
-    } else if (type === 'image') {
-      setImageFile(null);
-      setDemoImageUrl('');
-    } else {
-      setVideoFile(null);
-      setDemoVideoUrl('');
-    }
-  };
+  // Campaign settings (optional overrides)
+  const [dailyBudget, setDailyBudget] = useState<number>(25000);
+  const [duration, setDuration] = useState<number>(5);
+  const [objective, setObjective] = useState<string>('OUTCOME_TRAFFIC');
+  const [destinationUrl, setDestinationUrl] = useState<string>('https://send247.uk/');
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
@@ -108,11 +70,7 @@ export default function Home() {
       // Step 1: Generate ad strategy
       const response = await generateAd({
         prompt,
-        destination_url: destinationUrl || undefined,
-        logo_url: logoUrl || undefined,
-        demo_image_url: demoImageUrl || undefined,
-        demo_video_url: demoVideoUrl || undefined,
-        brand_colors: brandColors.length > 0 ? brandColors : undefined,
+        destination_url: destinationUrl,
       });
 
       // Step 2: Generate creative assets
@@ -134,17 +92,9 @@ export default function Home() {
     <div className="max-w-3xl mx-auto">
       {/* Hero Section */}
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-400 text-sm mb-6">
-          <Sparkles className="w-4 h-4" />
-          <span>Powered by Claude AI</span>
-        </div>
         <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
-          Create Ads with
-          <span className="bg-gradient-to-r from-primary-400 to-indigo-400 bg-clip-text text-transparent"> AI</span>
+          Send247 Ad Studio
         </h1>
-        <p className="text-slate-400 text-lg max-w-xl mx-auto">
-          Describe your product and audience. We generate the ad copy, creative, targeting, and deploy to Meta.
-        </p>
 
         {/* Feature Pills */}
         <div className="flex flex-wrap justify-center gap-3 mt-6">
@@ -152,8 +102,6 @@ export default function Home() {
             <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/50 border border-slate-700/50 text-sm">
               <feature.icon className="w-4 h-4 text-primary-400" />
               <span className="text-slate-300">{feature.title}</span>
-              <span className="text-slate-500">·</span>
-              <span className="text-slate-500">{feature.desc}</span>
             </div>
           ))}
         </div>
@@ -167,190 +115,15 @@ export default function Home() {
           </label>
           <textarea
             className="textarea h-32"
-            placeholder="e.g., Promote the parcel delivery API to logistics managers. Focus on the MCP integration. Energetic tone. 5000/day for 5 days."
+            placeholder="e.g., Promote Send247 to pharmacies in Stratford. Focus on fast, reliable delivery. Professional tone. £100/day for 5 days."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={loading}
           />
           <p className="text-xs text-slate-500 mt-1">
-            Include: product, target audience, tone, budget (optional)
+            Include: campaign idea, target audience, tone, budget (optional)
           </p>
         </div>
-
-        {/* Destination URL */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
-            Landing Page URL
-          </label>
-          <input
-            type="url"
-            className="input"
-            placeholder="https://yourproduct.com"
-            value={destinationUrl}
-            onChange={(e) => setDestinationUrl(e.target.value)}
-            disabled={loading}
-          />
-        </div>
-
-        {/* Brand Assets Toggle */}
-        <button
-          type="button"
-          className="flex items-center gap-2 text-slate-400 hover:text-white mb-4 transition-colors"
-          onClick={() => setShowAssets(!showAssets)}
-        >
-          <Upload className="w-4 h-4" />
-          <span>Brand Assets (Optional)</span>
-          {showAssets ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
-        </button>
-
-        {/* Brand Assets Section */}
-        {showAssets && (
-          <div className="space-y-4 p-4 bg-slate-900/50 rounded-lg mb-6">
-            {/* Logo Upload */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Logo
-              </label>
-              {!logoFile ? (
-                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg cursor-pointer transition-colors">
-                  <Upload className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-400 text-sm">
-                    {uploading.logo ? 'Uploading...' : 'Upload logo (PNG, JPG, max 5MB)'}
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={(e) => handleFileChange(e, 'logo')}
-                    disabled={loading || uploading.logo}
-                  />
-                </label>
-              ) : (
-                <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-green-400" />
-                    <span className="text-slate-300 text-sm">{logoFile.name}</span>
-                  </div>
-                  <button
-                    onClick={() => removeFile('logo')}
-                    className="text-slate-400 hover:text-red-400 transition-colors"
-                    disabled={loading}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Product Image Upload */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Product Image
-              </label>
-              {!imageFile ? (
-                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg cursor-pointer transition-colors">
-                  <Upload className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-400 text-sm">
-                    {uploading.image ? 'Uploading...' : 'Upload image (PNG, JPG, max 10MB)'}
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    onChange={(e) => handleFileChange(e, 'image')}
-                    disabled={loading || uploading.image}
-                  />
-                </label>
-              ) : (
-                <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-green-400" />
-                    <span className="text-slate-300 text-sm">{imageFile.name}</span>
-                  </div>
-                  <button
-                    onClick={() => removeFile('image')}
-                    className="text-slate-400 hover:text-red-400 transition-colors"
-                    disabled={loading}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Demo Video Upload */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Demo Video
-              </label>
-              {!videoFile ? (
-                <label className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-700 hover:border-slate-600 rounded-lg cursor-pointer transition-colors">
-                  <Upload className="w-4 h-4 text-slate-400" />
-                  <span className="text-slate-400 text-sm">
-                    {uploading.video ? 'Uploading...' : 'Upload video (MP4, max 50MB)'}
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="video/mp4,video/quicktime,video/x-msvideo,video/webm"
-                    onChange={(e) => handleFileChange(e, 'video')}
-                    disabled={loading || uploading.video}
-                  />
-                </label>
-              ) : (
-                <div className="flex items-center justify-between px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Upload className="w-4 h-4 text-green-400" />
-                    <span className="text-slate-300 text-sm">{videoFile.name}</span>
-                  </div>
-                  <button
-                    onClick={() => removeFile('video')}
-                    className="text-slate-400 hover:text-red-400 transition-colors"
-                    disabled={loading}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Brand Colors
-              </label>
-              <div className="flex gap-2">
-                {brandColors.map((color, index) => (
-                  <input
-                    key={index}
-                    type="color"
-                    value={color}
-                    onChange={(e) => {
-                      const newColors = [...brandColors];
-                      newColors[index] = e.target.value;
-                      setBrandColors(newColors);
-                    }}
-                    className="w-10 h-10 rounded cursor-pointer"
-                    disabled={loading}
-                  />
-                ))}
-                {brandColors.length < 3 && (
-                  <button
-                    type="button"
-                    onClick={() => setBrandColors([...brandColors, '#64748b'])}
-                    className="w-10 h-10 rounded border-2 border-dashed border-slate-600 text-slate-500 hover:border-slate-500 hover:text-slate-400"
-                    disabled={loading}
-                  >
-                    +
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Error Message */}
         {error && (
@@ -358,6 +131,121 @@ export default function Home() {
             {error}
           </div>
         )}
+
+        {/* Campaign Settings (Optional) */}
+        <div className="mb-6 border-t border-slate-700/50 pt-6">
+          <button
+            type="button"
+            className="flex items-center justify-between w-full mb-4 group"
+            onClick={() => setShowCampaignSettings(!showCampaignSettings)}
+          >
+            <div className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-slate-400 group-hover:text-slate-300 transition-colors" />
+              <h3 className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                Campaign Settings
+              </h3>
+              <span className="text-xs text-slate-500">(Optional - AI will set defaults)</span>
+            </div>
+            {showCampaignSettings ? (
+              <ChevronUp className="w-4 h-4 text-slate-400 group-hover:text-slate-300 transition-colors" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-300 transition-colors" />
+            )}
+          </button>
+
+          {showCampaignSettings && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              {/* Budget & Duration */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Daily Budget ({CURRENCY_CODE})
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">
+                      {CURRENCY_SYMBOL}
+                    </span>
+                    <input
+                      type="number"
+                      className="input pl-8"
+                      value={dailyBudget}
+                      onChange={(e) => setDailyBudget(parseFloat(e.target.value) || 0)}
+                      min={1}
+                      step={1000}
+                      placeholder="e.g. 25000"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Duration
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      className="input pr-14"
+                      value={duration}
+                      onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
+                      min={1}
+                      max={30}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                      days
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Budget Summary */}
+              <div className="bg-slate-800/50 rounded-lg p-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 text-sm">Lifetime Budget</span>
+                  <span className={`text-lg font-semibold ${(dailyBudget * duration) >= MIN_LIFETIME_BUDGET_NGN ? 'text-white' : 'text-red-400'}`}>
+                    {CURRENCY_SYMBOL}{(dailyBudget * duration).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-slate-500 text-xs">Minimum required</span>
+                  <span className="text-slate-500 text-xs">
+                    {CURRENCY_SYMBOL}{MIN_LIFETIME_BUDGET_NGN.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Objective */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Objective
+                </label>
+                <select
+                  className="input"
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                >
+                  {OBJECTIVE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Destination URL */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">
+                  Destination URL
+                </label>
+                <input
+                  type="url"
+                  className="input"
+                  value={destinationUrl}
+                  onChange={(e) => setDestinationUrl(e.target.value)}
+                  placeholder="https://send247.uk/"
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Generate Button */}
         <button
@@ -401,9 +289,9 @@ export default function Home() {
         {showExamples && (
           <div className="grid gap-3 mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
             {[
-              { text: 'Promote the AI assistant builder to startup founders who use no-code tools. Punchy tone. ₦25,000/day for 5 days.', tag: 'SaaS' },
-              { text: 'Advertise the productivity app to remote workers and freelancers. Professional tone. ₦30,000/day for 4 days.', tag: 'App' },
-              { text: 'Launch campaign for delivery API targeting e-commerce developers. Technical tone. ₦22,000/day for 5 days.', tag: 'API' },
+              { text: 'Target pharmacies in Stratford needing faster prescription deliveries. Focus on reliability and speed. Professional tone. £50/day for 5 days.', tag: 'Pharmacies' },
+              { text: 'Reach e-commerce businesses in London struggling with same-day delivery. Emphasize API integration and tech. Modern tone. £75/day for 4 days.', tag: 'E-commerce' },
+              { text: 'Advertise to retail shops in Manchester needing urgent courier services. Highlight 24/7 availability. Friendly tone. £60/day for 5 days.', tag: 'Retail' },
             ].map((example, index) => (
               <button
                 key={index}

@@ -57,9 +57,9 @@ export default function PreviewPage() {
   const [showDeployModal, setShowDeployModal] = useState(false);
 
   // Collapsible section state
-  const [showAdCopy, setShowAdCopy] = useState(true);
-  const [showAudience, setShowAudience] = useState(true);
-  const [showCampaignSettings, setShowCampaignSettings] = useState(true);
+  const [showAdCopy, setShowAdCopy] = useState(false);
+  const [showAudience, setShowAudience] = useState(false);
+  const [showCampaignSettings, setShowCampaignSettings] = useState(false);
 
   // Editable state
   const [adCopy, setAdCopy] = useState<AdCopy>({

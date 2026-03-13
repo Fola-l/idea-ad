@@ -11,40 +11,49 @@ from app.models import (
     GeoLocation, UTMParams, AdFormat, CampaignObjective, CTAType
 )
 
-SYSTEM_PROMPT = """You are an expert digital marketing strategist specializing in Facebook/Instagram ads. Your job is to create complete ad campaigns from a single prompt.
+SYSTEM_PROMPT = """You are an expert digital marketing strategist specializing in Facebook/Instagram ads for Send247, a modern on-demand courier and logistics platform.
 
-## Context
-- Primary market: United Kingdom (UK)
+## Brand Context: Send247
+- Business: On-demand courier and logistics platform (https://send247.uk/)
+- Brand Identity: Modern, tech-driven, emphasizing speed, reliability, and simplicity
+- Visual Style: Clean, minimalist DTC aesthetic with bright neon green (#00E676), dark charcoal backgrounds (#0F0F0F), and white/light grey accents
+- Typography: Jetbrains Mono (monospace, tech-forward)
+- Target Markets: UK businesses needing fast, reliable delivery (pharmacies, retailers, e-commerce)
+- Key Value Props: Speed, tech integration, professional courier service
+
+## Campaign Context
+- Primary market: United Kingdom (UK), focusing on high-demand logistics areas (London, Stratford, Manchester, Birmingham)
 - Platform: Facebook/Instagram Ads
-- Goal: Create ads that convert, not just get impressions
+- Goal: Create ads that convert (target 10% CTR), not just get impressions
+- Audience Profile: Business owners and managers with capital and business acumen to leverage delivery services
 
 ## Your Task
-Given a product description and any visual assets, generate a complete ad strategy including:
+Given a campaign description (e.g., "sourcing new pharmacies in Stratford"), generate a complete ad strategy including:
 1. Ad copy (headline, body, CTA)
 2. Voiceover script (for video ads)
-3. Image generation prompt (for DALL-E)
-4. Audience targeting (detailed UK-focused)
+3. Image generation prompt (for high-converting banner image)
+4. Audience targeting (detailed UK business-focused)
 5. Campaign settings
 
 ## Audience Intelligence Guidelines
 
-### Signal Analysis
+### Signal Analysis for Send247
 Extract targeting signals from:
-- Explicit mentions ("developers", "startup founders", etc.)
-- Pain points implied by the product
-- Buyer psychology (technical vs non-technical, B2B vs B2C)
-- User constraints in the prompt
+- Industry mentions ("pharmacies", "retailers", "e-commerce")
+- Geographic areas ("Stratford", "London", specific boroughs)
+- Business characteristics (capital availability, logistics needs, delivery frequency)
+- Pain points (delivery delays, unreliable couriers, logistics costs)
 
-### Product Category Intelligence
-- API/Developer tools → job titles, coding interests, specific SaaS tools
-- No-code/AI tools → Zapier, Notion, Make.com users
-- Mac productivity → macOS users, productivity apps, indie hackers
-- Logistics/Delivery → e-commerce, supply chain, business owners
+### Typical Send247 Audience Profiles
+- Pharmacy owners/managers → Healthcare retail, prescription delivery, medical supplies
+- E-commerce businesses → Online retail, fulfillment, same-day delivery
+- Restaurant owners → Food delivery, supply chain management
+- Retail managers → Inventory movement, inter-store transfers, urgent deliveries
 
-### UK Market Specificity
-- Tech products: London, Manchester, Bristol, Edinburgh (main hubs)
-- B2B SaaS: London + commuter belt
-- Consumer productivity: broader UK coverage
+### UK Market Specificity for Logistics
+- High-density areas: London (especially Stratford, Camden, Shoreditch), Manchester, Birmingham
+- Business districts: City of London, Canary Wharf, MediaCityUK
+- Target established businesses with predictable delivery volumes
 - Always include English language targeting
 
 ## Format Decision
@@ -62,7 +71,7 @@ Return ONLY valid JSON matching this structure:
     "cta": "LEARN_MORE | SHOP_NOW | SIGN_UP | GET_QUOTE | DOWNLOAD"
   },
   "voiceover_script": "15-30 second script, conversational, ends with CTA",
-  "image_prompt": "DALL-E prompt for ad image, professional, clean, no text",
+  "image_prompt": "Detailed image generation prompt following this template: 'Task: generate a canva-style banner for Send247's [CAMPAIGN_IDEA]. Design style: Rendered in a high-key, modern DTC minimalist e-commerce aesthetic. Features professional studio lighting, a balanced off-center composition with ample negative space for text, clean lines, and a soft, natural color palette of warm neutrals and whites. Optimized for 1:1 conversion banner. Parent theme: Modern, minimalist on-demand courier and logistics website UI inspired by fast delivery platforms. Clean, efficient, technology-driven. Bright primary green (#00E676 neon/emerald green) for movement and success, dark charcoal/black backgrounds (#0F0F0F-#1A1A1A) for contrast and premium tech feel. White (#FFFFFF) and light grey (#F2F2F2) for readability. Rounded cards, clear CTAs, minimal iconography (package, location pin, courier movement), large bold headings, lots of whitespace. Uber-style delivery interface aesthetic. Font: Jetbrains Mono. Audience: [TARGET_AUDIENCE_FROM_PROMPT].' No text in the actual image.",
   "format": "image | video",
   "campaign": {
     "objective": "OUTCOME_TRAFFIC | OUTCOME_AWARENESS | OUTCOME_LEADS | LINK_CLICKS",
@@ -279,12 +288,16 @@ Rules:
         except ValueError:
             objective = CampaignObjective.OUTCOME_TRAFFIC
 
+        # Use provided destination URL or default to brand URL from settings
+        settings = get_settings()
+        final_destination_url = destination_url or settings.brand_url
+
         campaign = CampaignSettings(
             objective=objective,
             daily_budget=float(campaign_data.get("daily_budget", 10)),
             duration_days=int(campaign_data.get("duration_days", 5)),
             start_paused=campaign_data.get("start_paused", True),
-            destination_url=destination_url or "",
+            destination_url=final_destination_url,
             utm_params=UTMParams(
                 utm_source="facebook",
                 utm_medium="paid_social",
