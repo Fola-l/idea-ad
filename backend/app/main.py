@@ -290,6 +290,14 @@ async def deploy_ad(request: DeployRequest):
         audience = Audience(**request.approved_audience)
         campaign_settings = CampaignSettings(**request.approved_settings)
 
+        # Validate Lead Generation requirements
+        if campaign_settings.objective.value == "LEAD_GENERATION":
+            if not request.privacy_policy_url:
+                raise HTTPException(
+                    status_code=400,
+                    detail="privacy_policy_url is required for Lead Generation campaigns. Meta requires a privacy policy URL to create a lead form."
+                )
+
         # Get creative URLs
         creative_urls = job.get("creative_urls", {})
         image_url = creative_urls.get("image_url")
@@ -302,7 +310,8 @@ async def deploy_ad(request: DeployRequest):
             audience=audience,
             campaign_settings=campaign_settings,
             image_url=image_url,
-            video_url=video_url
+            video_url=video_url,
+            privacy_policy_url=request.privacy_policy_url
         )
 
         # Update job with Meta IDs

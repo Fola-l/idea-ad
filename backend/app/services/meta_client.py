@@ -64,7 +64,8 @@ class MetaClient:
         audience: Audience,
         campaign_settings: CampaignSettings,
         image_url: Optional[str] = None,
-        video_url: Optional[str] = None
+        video_url: Optional[str] = None,
+        privacy_policy_url: Optional[str] = None
     ) -> MetaIds:
         """
         Deploy a complete ad campaign to Meta.
@@ -133,11 +134,31 @@ class MetaClient:
         else:
             raise MetaAPIError("No creative asset provided")
 
-        # Step 5: Create Ad Creative
+        # Step 5: Create Ad Creative (branch on objective)
         logger.info("[DEPLOY] Step 5: Creating Ad Creative...")
-        creative_id = await self._create_creative(
-            ad_copy, campaign_settings, asset_id, is_video
-        )
+        if campaign_settings.objective.value == "LEAD_GENERATION":
+            # Lead generation campaigns require a lead form
+            if not privacy_policy_url:
+                raise MetaAPIError("privacy_policy_url is required for Lead Generation campaigns")
+
+            # Step 5a: Create lead form
+            logger.info("[DEPLOY] Step 5a: Creating Lead Form...")
+            form_id = await self._create_lead_form(
+                form_name=sanitize_for_meta(f"Form - {ad_copy.headline[:20]}"),
+                privacy_policy_url=privacy_policy_url,
+                follow_up_url=campaign_settings.destination_url
+            )
+
+            # Step 5b: Create lead gen creative
+            logger.info("[DEPLOY] Step 5b: Creating Lead Gen Creative...")
+            creative_id = await self._create_lead_gen_creative(
+                ad_copy, asset_id, form_id, is_video
+            )
+        else:
+            # Standard creative flow
+            creative_id = await self._create_creative(
+                ad_copy, campaign_settings, asset_id, is_video
+            )
 
         # Step 6: Create Ad
         logger.info("[DEPLOY] Step 6: Creating Ad...")
@@ -337,6 +358,13 @@ class MetaClient:
         # Default to False if we can't determine
         return False
 
+    def clean_city_name(self, city: str) -> str:
+        """
+        Strip everything after the first comma to handle cases where Claude
+        returns full addresses like "Stratford, London, UK" instead of "Stratford".
+        """
+        return city.split(",")[0].strip()
+
     async def resolve_city_key(self, city_name: str, country_code: str) -> Optional[str]:
         """
         Resolve a city name to its Meta geolocation key (numeric ID).
@@ -348,6 +376,9 @@ class MetaClient:
         Returns:
             Numeric key string (e.g., "2332459") or None if not found
         """
+        # Clean the city name before searching
+        city_name = self.clean_city_name(city_name)
+
         url = f"{self.BASE_URL}/search"
         params = {
             "type": "adgeolocation",
@@ -593,6 +624,104 @@ class MetaClient:
         }
 
         response = await self._make_request("POST", url, data)
+        return response["id"]
+
+    async def _create_lead_form(
+        self,
+        form_name: str,
+        privacy_policy_url: str,
+        follow_up_url: str,
+        questions: Optional[List[Dict]] = None
+    ) -> str:
+        """
+        Create a Facebook Lead Form.
+
+        Args:
+            form_name: Name of the lead form
+            privacy_policy_url: URL to privacy policy (required by Meta)
+            follow_up_url: URL to redirect after form submission
+            questions: List of form questions (defaults to FULL_NAME + EMAIL)
+
+        Returns:
+            Lead form ID
+        """
+        url = f"{self.BASE_URL}/{self.page_id}/leadgen_forms"
+
+        data = {
+            "name": sanitize_for_meta(form_name),
+            "questions": questions or [
+                {"type": "FULL_NAME"},
+                {"type": "EMAIL"}
+            ],
+            "privacy_policy": {"url": privacy_policy_url},
+            "follow_up_action_url": follow_up_url,
+            "access_token": self.access_token
+        }
+
+        response = await self._make_request("POST", url, data)
+        logger.info(f"Created lead form: {response['id']}")
+        return response["id"]
+
+    async def _create_lead_gen_creative(
+        self,
+        ad_copy: AdCopy,
+        asset_id: str,
+        form_id: str,
+        is_video: bool
+    ) -> str:
+        """
+        Create a lead generation creative with a lead form attached.
+
+        Args:
+            ad_copy: Ad copy (headline and body)
+            asset_id: Image or video asset ID
+            form_id: Lead form ID
+            is_video: Whether the asset is a video
+
+        Returns:
+            Creative ID
+        """
+        url = f"{self.BASE_URL}/{self.ad_account_id}/adcreatives"
+
+        if is_video:
+            object_story_spec = {
+                "page_id": self.page_id,
+                "video_data": {
+                    "video_id": asset_id,
+                    "title": sanitize_for_meta(ad_copy.headline),
+                    "message": sanitize_for_meta(ad_copy.body),
+                    "call_to_action": {
+                        "type": "SIGN_UP",
+                        "value": {
+                            "lead_gen_form_id": form_id
+                        }
+                    }
+                }
+            }
+        else:
+            object_story_spec = {
+                "page_id": self.page_id,
+                "link_data": {
+                    "message": sanitize_for_meta(ad_copy.body),
+                    "name": sanitize_for_meta(ad_copy.headline),
+                    "picture": asset_id,
+                    "call_to_action": {
+                        "type": "SIGN_UP",
+                        "value": {
+                            "lead_gen_form_id": form_id
+                        }
+                    }
+                }
+            }
+
+        data = {
+            "name": sanitize_for_meta(f"LeadCreative - {ad_copy.headline[:20]}"),
+            "object_story_spec": object_story_spec,
+            "access_token": self.access_token
+        }
+
+        response = await self._make_request("POST", url, data)
+        logger.info(f"Created lead gen creative: {response['id']}")
         return response["id"]
 
     async def _create_ad(

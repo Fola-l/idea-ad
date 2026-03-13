@@ -35,6 +35,7 @@ const OBJECTIVE_OPTIONS = [
   { value: 'OUTCOME_AWARENESS', label: 'Awareness' },
   { value: 'OUTCOME_LEADS', label: 'Leads' },
   { value: 'LINK_CLICKS', label: 'Link Clicks' },
+  { value: 'LEAD_GENERATION', label: 'Lead Generation' },
 ];
 
 // Minimum lifetime budget in NGN (₦108,300 = 10,830,000 kobo)
@@ -69,6 +70,7 @@ export default function PreviewPage() {
   });
   const [audience, setAudience] = useState<Audience | null>(null);
   const [campaignSettings, setCampaignSettings] = useState<CampaignSettings | null>(null);
+  const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState<string>('https://send247.uk/privacy-policy');
 
   useEffect(() => {
     loadPreview();
@@ -143,6 +145,12 @@ export default function PreviewPage() {
   const handleDeploy = async () => {
     if (!audience || !campaignSettings) return;
 
+    // Validate privacy policy URL for lead generation campaigns
+    if (campaignSettings.objective === 'LEAD_GENERATION' && !privacyPolicyUrl) {
+      setError('Privacy Policy URL is required for Lead Generation campaigns');
+      return;
+    }
+
     try {
       setDeploying(true);
       const result = await deployAd({
@@ -150,6 +158,7 @@ export default function PreviewPage() {
         approved_copy: adCopy,
         approved_audience: audience,
         approved_settings: campaignSettings,
+        privacy_policy_url: privacyPolicyUrl,
         sandbox_mode: sandboxMode,
       });
 
@@ -616,6 +625,36 @@ export default function PreviewPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Lead Generation - Privacy Policy URL */}
+                  {campaignSettings.objective === 'LEAD_GENERATION' && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                      <div className="flex items-start gap-2 mb-3">
+                        <svg className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                          <h4 className="text-sm font-medium text-amber-400">Lead Generation Campaign</h4>
+                          <p className="text-xs text-amber-300/80 mt-1">
+                            Meta requires a privacy policy URL to collect leads via Facebook forms.
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">
+                          Privacy Policy URL *
+                        </label>
+                        <input
+                          type="url"
+                          className="input"
+                          value={privacyPolicyUrl}
+                          onChange={(e) => setPrivacyPolicyUrl(e.target.value)}
+                          placeholder="https://send247.uk/privacy-policy"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">

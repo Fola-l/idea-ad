@@ -37,6 +37,12 @@ Given a campaign description (e.g., "sourcing new pharmacies in Stratford"), gen
 
 ## Audience Intelligence Guidelines
 
+### Geographic Targeting Rules - IMPORTANT
+Cities must be returned as simple single names only.
+Never include country, region, county, or postal codes in a city name.
+CORRECT: "London", "Manchester", "Stratford"
+WRONG: "London, UK", "Stratford, London, UK", "Manchester, England"
+
 ### Signal Analysis for Send247
 Extract targeting signals from:
 - Industry mentions ("pharmacies", "retailers", "e-commerce")
@@ -74,7 +80,7 @@ Return ONLY valid JSON matching this structure:
   "image_prompt": "Detailed image generation prompt following this template: 'Task: generate a canva-style banner for Send247's [CAMPAIGN_IDEA]. Design style: Rendered in a high-key, modern DTC minimalist e-commerce aesthetic. Features professional studio lighting, a balanced off-center composition with ample negative space for text, clean lines, and a soft, natural color palette of warm neutrals and whites. Optimized for 1:1 conversion banner. Parent theme: Modern, minimalist on-demand courier and logistics website UI inspired by fast delivery platforms. Clean, efficient, technology-driven. Bright primary green (#00E676 neon/emerald green) for movement and success, dark charcoal/black backgrounds (#0F0F0F-#1A1A1A) for contrast and premium tech feel. White (#FFFFFF) and light grey (#F2F2F2) for readability. Rounded cards, clear CTAs, minimal iconography (package, location pin, courier movement), large bold headings, lots of whitespace. Uber-style delivery interface aesthetic. Font: Jetbrains Mono. Audience: [TARGET_AUDIENCE_FROM_PROMPT].' No text in the actual image.",
   "format": "image | video",
   "campaign": {
-    "objective": "OUTCOME_TRAFFIC | OUTCOME_AWARENESS | OUTCOME_LEADS | LINK_CLICKS",
+    "objective": "OUTCOME_TRAFFIC | OUTCOME_AWARENESS | OUTCOME_LEADS | LINK_CLICKS | LEAD_GENERATION",
     "daily_budget": 10,
     "duration_days": 5,
     "start_paused": true

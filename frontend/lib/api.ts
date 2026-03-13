@@ -119,6 +119,7 @@ export interface DeployRequest {
   approved_copy: AdCopy;
   approved_audience: Audience;
   approved_settings: CampaignSettings;
+  privacy_policy_url?: string;
   sandbox_mode: boolean;
 }
 

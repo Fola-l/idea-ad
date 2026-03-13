@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     # Brand Settings (Send247)
     brand_name: str = "Send247"
     brand_url: str = "https://send247.uk/"
+    brand_privacy_policy_url: str = "https://send247.uk/privacy-policy"
     brand_description: str = "Modern on-demand courier and logistics platform"
     brand_font: str = "Jetbrains Mono"
     brand_primary_color: str = "#00E676"

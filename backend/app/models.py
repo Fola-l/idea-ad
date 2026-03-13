@@ -14,6 +14,7 @@ class CampaignObjective(str, Enum):
     OUTCOME_AWARENESS = "OUTCOME_AWARENESS"
     OUTCOME_LEADS = "OUTCOME_LEADS"
     OUTCOME_TRAFFIC = "OUTCOME_TRAFFIC"
+    LEAD_GENERATION = "LEAD_GENERATION"
 
 
 class CTAType(str, Enum):
@@ -52,6 +53,7 @@ class DeployRequest(BaseModel):
     approved_copy: Dict[str, str] = Field(..., description="Approved ad copy")
     approved_audience: Dict[str, Any] = Field(..., description="Approved audience targeting")
     approved_settings: Dict[str, Any] = Field(..., description="Approved campaign settings")
+    privacy_policy_url: Optional[str] = Field(None, description="Privacy policy URL (required for Lead Generation campaigns)")
     sandbox_mode: bool = True
 
 
