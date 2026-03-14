@@ -20,6 +20,9 @@ import {
 import { getAdStatus, activateAd, type StatusResponse, type ActivateResponse } from '@/lib/api';
 import Link from 'next/link';
 
+
+const META_AD_ACCOUNT_ID = process.env.NEXT_PUBLIC_META_AD_ACCOUNT_ID;
+const META_BUSINESS_ID = process.env.NEXT_PUBLIC_META_BUSINESS_ID;
 // Status categories for UX
 type ReviewState = 'pending' | 'approved' | 'disapproved' | 'unknown';
 type DeliveryState = 'paused' | 'active' | 'inactive';
@@ -126,6 +129,11 @@ export default function StatusPage() {
   const reviewState = getReviewState(status);
   const deliveryState = getDeliveryState(status);
   const showActivateButton = canActivate(status);
+
+  const adsManagerUrl =
+    status?.campaign_id && status?.adset_id
+      ? `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${META_AD_ACCOUNT_ID}&business_id=${META_BUSINESS_ID}&nav_entry_point=mbs_sub_nav&selected_campaign_ids=${status.campaign_id}&selected_adset_ids=${status.adset_id}`
+      : `https://adsmanager.facebook.com/adsmanager/manage/ads?act=${META_AD_ACCOUNT_ID}&business_id=${META_BUSINESS_ID}`;
 
   if (loading) {
     return (
@@ -361,8 +369,9 @@ export default function StatusPage() {
       <div className="card">
         <h2 className="text-lg font-semibold text-white mb-4">Actions</h2>
         <div className="flex flex-col sm:flex-row gap-3">
+
           <a
-            href={`https://business.facebook.com/adsmanager/manage/ads?act=${adId}`}
+            href={adsManagerUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-secondary flex items-center justify-center gap-2 flex-1"
@@ -370,6 +379,7 @@ export default function StatusPage() {
             <ExternalLink className="w-4 h-4" />
             View in Ads Manager
           </a>
+
           <Link
             href="/"
             className="btn-primary flex items-center justify-center gap-2 flex-1"
