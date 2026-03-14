@@ -34,8 +34,6 @@ const OBJECTIVE_OPTIONS = [
   { value: 'OUTCOME_TRAFFIC', label: 'Traffic' },
   { value: 'OUTCOME_AWARENESS', label: 'Awareness' },
   { value: 'OUTCOME_LEADS', label: 'Leads' },
-  { value: 'LINK_CLICKS', label: 'Link Clicks' },
-  { value: 'LEAD_GENERATION', label: 'Lead Generation' },
 ];
 
 // Minimum lifetime budget in NGN (₦108,300 = 10,830,000 kobo)
@@ -146,10 +144,10 @@ export default function PreviewPage() {
     if (!audience || !campaignSettings) return;
 
     // Validate privacy policy URL for lead generation campaigns
-    if (campaignSettings.objective === 'LEAD_GENERATION' && !privacyPolicyUrl) {
-      setError('Privacy Policy URL is required for Lead Generation campaigns');
-      return;
-    }
+   if (campaignSettings.objective === 'OUTCOME_LEADS' && !privacyPolicyUrl) {
+    setError('Privacy Policy URL is required for Leads campaigns');
+    return;
+  }
 
     try {
       setDeploying(true);
@@ -627,7 +625,7 @@ export default function PreviewPage() {
                   </div>
 
                   {/* Lead Generation - Privacy Policy URL */}
-                  {campaignSettings.objective === 'LEAD_GENERATION' && (
+                  {campaignSettings.objective === 'OUTCOME_LEADS' && (
                     <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
                       <div className="flex items-start gap-2 mb-3">
                         <svg className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

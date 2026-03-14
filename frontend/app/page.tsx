@@ -25,8 +25,6 @@ const OBJECTIVE_OPTIONS = [
   { value: 'OUTCOME_TRAFFIC', label: 'Traffic' },
   { value: 'OUTCOME_AWARENESS', label: 'Awareness' },
   { value: 'OUTCOME_LEADS', label: 'Leads' },
-  { value: 'LINK_CLICKS', label: 'Link Clicks' },
-  { value: 'LEAD_GENERATION', label: 'Lead Generation' },
 ];
 
 // Minimum lifetime budget in NGN (₦108,300 = 10,830,000 kobo)

@@ -64,39 +64,35 @@ class InterestResolver:
         result = await self._search_interest(interest_name)
         if result:
             # Cache the result
+
+
             await cache_interest(
-                interest_name=result["name"],
+                interest_name=interest_name,
                 interest_id=result["id"],
                 audience_size=result.get("audience_size")
             )
+         
             return {"id": result["id"], "name": result["name"]}
 
         return None
 
+
     def _best_interest_match(self, query: str, results: List[Dict]) -> Optional[Dict]:
         """
-        Find the best matching interest from search results using similarity scoring.
+        Find the best matching interest from search results.
 
         Priority:
-        1. Filter by minimum audience size (100k+) to exclude brand-specific interests
-        2. Exact name match (case-insensitive)
-        3. Query is substring of result name
-        4. Result name is substring of query
-        5. First result with meaningful audience
-
-        Args:
-            query: Original search query
-            results: List of interest results from Meta API
-
-        Returns:
-            Best matching interest or None
+        1. Filter by minimum audience size (100k+)
+        2. Exact name match
+        3. Query contained in result
+        4. Result contained in query
         """
+
         if not results:
             return None
 
         query_lower = query.lower().strip()
 
-        # Filter out results with very small audiences first (brand-specific interests)
         MIN_AUDIENCE_SIZE = 100_000
 
         qualified = [
@@ -104,31 +100,28 @@ class InterestResolver:
             if r.get("audience_size_lower_bound", 0) >= MIN_AUDIENCE_SIZE
         ]
 
-        # Use qualified results if any, otherwise fall back to all results
         search_pool = qualified if qualified else results
 
-        # Priority 1: Exact match
+        # Exact match
         for result in search_pool:
             if result["name"].lower() == query_lower:
                 return result
 
-        # Priority 2: Query is substring of result name
+        # Query contained in result
         for result in search_pool:
             if query_lower in result["name"].lower():
                 return result
 
-        # Priority 3: Result name is substring of query
+        # Result contained in query
         for result in search_pool:
             if result["name"].lower() in query_lower:
                 return result
 
-        # Priority 4: First result with meaningful audience
-        if search_pool:
-            return search_pool[0]
-
-        # Skip if no good match found
+        # No safe match
         return None
 
+
+   
     async def _search_interest(
         self,
         query: str

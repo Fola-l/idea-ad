@@ -135,30 +135,44 @@ class MetaClient:
             raise MetaAPIError("No creative asset provided")
 
         # Step 5: Create Ad Creative (branch on objective)
+
         logger.info("[DEPLOY] Step 5: Creating Ad Creative...")
-        if campaign_settings.objective.value == "LEAD_GENERATION":
+        is_lead_gen = campaign_settings.objective in {
+            CampaignObjective.LEAD_GENERATION,
+            CampaignObjective.OUTCOME_LEADS,
+        }
+
+        if is_lead_gen:
             # Lead generation campaigns require a lead form
             if not privacy_policy_url:
                 raise MetaAPIError("privacy_policy_url is required for Lead Generation campaigns")
 
-            # Step 5a: Create lead form
             logger.info("[DEPLOY] Step 5a: Creating Lead Form...")
+            
             form_id = await self._create_lead_form(
-                form_name=sanitize_for_meta(f"Form - {ad_copy.headline[:20]}"),
+                form_name=sanitize_for_meta(f"Form - {ad_copy.headline[:20]} - {job_id[:8]}"),
                 privacy_policy_url=privacy_policy_url,
                 follow_up_url=campaign_settings.destination_url
             )
+            
+        
+            logger.info(f"[DEPLOY] Lead form created: {form_id}")
 
-            # Step 5b: Create lead gen creative
             logger.info("[DEPLOY] Step 5b: Creating Lead Gen Creative...")
             creative_id = await self._create_lead_gen_creative(
-                ad_copy, asset_id, form_id, is_video
+                ad_copy,
+                asset_id,
+                form_id,
+                is_video,
+                campaign_settings.destination_url
             )
+
+            logger.info(f"[DEPLOY] Lead creative created: {creative_id}")
         else:
-            # Standard creative flow
             creative_id = await self._create_creative(
                 ad_copy, campaign_settings, asset_id, is_video
             )
+
 
         # Step 6: Create Ad
         logger.info("[DEPLOY] Step 6: Creating Ad...")
@@ -230,6 +244,8 @@ class MetaClient:
         response = await self._make_request("POST", url, data)
         return response["id"]
 
+
+
     async def _create_adset(
         self,
         campaign_id: str,
@@ -240,11 +256,8 @@ class MetaClient:
         """Create an ad set with targeting."""
         url = f"{self.BASE_URL}/{self.ad_account_id}/adsets"
 
-        # Convert budget to minor currency units (kobo for NGN, pence for GBP, cents for USD)
-        # Use lifetime_budget = daily_budget * duration_days * 100
         lifetime_budget = int(settings.daily_budget * settings.duration_days * 100)
 
-        # Validate minimum budget for NGN
         if lifetime_budget < self.MIN_LIFETIME_BUDGET_KOBO:
             min_naira = self.MIN_LIFETIME_BUDGET_KOBO / 100
             current_naira = lifetime_budget / 100
@@ -253,12 +266,10 @@ class MetaClient:
                 f"Increase daily budget or duration."
             )
 
-        # Build targeting spec (may be modified on retry if interests are deprecated or city targeting fails)
         current_interests = resolved_interests.copy()
         skip_city_targeting = False
         targeting = self._build_targeting_spec(audience, current_interests, skip_city_targeting)
 
-        # Calculate start/end times
         start_time = datetime.utcnow() + timedelta(days=1)
         end_time = start_time + timedelta(days=settings.duration_days)
 
@@ -266,7 +277,6 @@ class MetaClient:
             f"AdSet - {audience.targeting_confidence} confidence"
         )
 
-        # Map objective to optimization goal
         optimization_goal = self._get_optimization_goal(settings.objective)
 
         data = {
@@ -283,7 +293,12 @@ class MetaClient:
             "access_token": self.access_token
         }
 
-        # Try creating adset, handling deprecated interests and city targeting errors
+        if optimization_goal == "LEAD_GENERATION":
+            data["destination_type"] = "ON_AD"
+            data["promoted_object"] = {
+                "page_id": self.page_id
+            }
+
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -291,7 +306,6 @@ class MetaClient:
                 return response["id"]
             except MetaAPIError as e:
                 if e.subcode == self.DEPRECATED_INTEREST_SUBCODE:
-                    # Parse deprecated interests from error and remove them
                     deprecated_ids = self._parse_deprecated_interests_from_error(e)
                     if deprecated_ids and attempt < max_retries - 1:
                         logger.warning(f"Removing deprecated interests: {deprecated_ids}")
@@ -305,7 +319,6 @@ class MetaClient:
                         data["targeting"] = targeting
                         continue
                 elif e.subcode == self.CITY_TARGETING_NOT_SUPPORTED_SUBCODE:
-                    # City targeting not supported, retry without cities
                     if not skip_city_targeting and attempt < max_retries - 1:
                         logger.warning("City targeting not supported, retrying without cities")
                         skip_city_targeting = True
@@ -317,6 +330,7 @@ class MetaClient:
                 raise
 
         raise MetaAPIError("Failed to create ad set after retries")
+
 
     def _parse_deprecated_interests_from_error(self, error: MetaAPIError) -> List[str]:
         """Parse deprecated interest IDs from Meta API error."""
@@ -626,6 +640,8 @@ class MetaClient:
         response = await self._make_request("POST", url, data)
         return response["id"]
 
+
+
     async def _create_lead_form(
         self,
         form_name: str,
@@ -635,15 +651,6 @@ class MetaClient:
     ) -> str:
         """
         Create a Facebook Lead Form.
-
-        Args:
-            form_name: Name of the lead form
-            privacy_policy_url: URL to privacy policy (required by Meta)
-            follow_up_url: URL to redirect after form submission
-            questions: List of form questions (defaults to FULL_NAME + EMAIL)
-
-        Returns:
-            Lead form ID
         """
         url = f"{self.BASE_URL}/{self.page_id}/leadgen_forms"
 
@@ -653,7 +660,10 @@ class MetaClient:
                 {"type": "FULL_NAME"},
                 {"type": "EMAIL"}
             ],
-            "privacy_policy": {"url": privacy_policy_url},
+            "privacy_policy": {
+                "url": privacy_policy_url,
+                "link_text": "Privacy Policy"
+            },
             "follow_up_action_url": follow_up_url,
             "access_token": self.access_token
         }
@@ -662,26 +672,18 @@ class MetaClient:
         logger.info(f"Created lead form: {response['id']}")
         return response["id"]
 
+
     async def _create_lead_gen_creative(
         self,
         ad_copy: AdCopy,
         asset_id: str,
         form_id: str,
-        is_video: bool
+        is_video: bool,
+        destination_url: Optional[str] = None
     ) -> str:
-        """
-        Create a lead generation creative with a lead form attached.
-
-        Args:
-            ad_copy: Ad copy (headline and body)
-            asset_id: Image or video asset ID
-            form_id: Lead form ID
-            is_video: Whether the asset is a video
-
-        Returns:
-            Creative ID
-        """
         url = f"{self.BASE_URL}/{self.ad_account_id}/adcreatives"
+
+        safe_link = destination_url or "https://www.facebook.com"
 
         if is_video:
             object_story_spec = {
@@ -693,6 +695,7 @@ class MetaClient:
                     "call_to_action": {
                         "type": "SIGN_UP",
                         "value": {
+                            "link": safe_link,
                             "lead_gen_form_id": form_id
                         }
                     }
@@ -704,7 +707,8 @@ class MetaClient:
                 "link_data": {
                     "message": sanitize_for_meta(ad_copy.body),
                     "name": sanitize_for_meta(ad_copy.headline),
-                    "picture": asset_id,
+                    "link": safe_link,
+                    "image_hash": asset_id,
                     "call_to_action": {
                         "type": "SIGN_UP",
                         "value": {
@@ -723,6 +727,7 @@ class MetaClient:
         response = await self._make_request("POST", url, data)
         logger.info(f"Created lead gen creative: {response['id']}")
         return response["id"]
+
 
     async def _create_ad(
         self,
