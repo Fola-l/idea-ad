@@ -14,7 +14,7 @@ class DalleService:
         self,
         prompt: str,
         size: str = "1024x1024",
-        quality: str = "high"
+        quality: str = "low"
     ) -> bytes:
         """
         Generate an image using GPT Image 1.5.
@@ -68,7 +68,7 @@ class DalleService:
         self,
         prompt: str,
         size: str = "1024x1024",
-        quality: str = "high"
+        quality: str = "low"
     ) -> str:
         """
         Generate an image and return a temporary URL.
