@@ -36,8 +36,6 @@ const OBJECTIVE_OPTIONS = [
   { value: 'OUTCOME_LEADS', label: 'Leads' },
 ];
 
-// Minimum lifetime budget in NGN (₦108,300 = 10,830,000 kobo)
-const MIN_LIFETIME_BUDGET_NGN = 108_300;
 const CURRENCY_SYMBOL = '₦';
 const CURRENCY_CODE = 'NGN';
 
@@ -69,6 +67,7 @@ export default function PreviewPage() {
   const [audience, setAudience] = useState<Audience | null>(null);
   const [campaignSettings, setCampaignSettings] = useState<CampaignSettings | null>(null);
   const [privacyPolicyUrl, setPrivacyPolicyUrl] = useState<string>('https://send247.uk/privacy-policy');
+  const [budgetError, setBudgetError] = useState<string>('');
 
   useEffect(() => {
     loadPreview();
@@ -151,6 +150,7 @@ export default function PreviewPage() {
 
     try {
       setDeploying(true);
+      setBudgetError(''); // Clear any previous budget error
       const result = await deployAd({
         job_id: jobId,
         approved_copy: adCopy,
@@ -164,7 +164,13 @@ export default function PreviewPage() {
         router.push(`/status/${result.ad_id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to deploy ad');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to deploy ad';
+      // Check if this is a budget error from Meta
+      if (errorMessage.toLowerCase().includes('budget')) {
+        setBudgetError(errorMessage);
+      } else {
+        setError(errorMessage);
+      }
       setDeploying(false);
     }
   };
@@ -494,9 +500,6 @@ export default function PreviewPage() {
         {/* Campaign Settings */}
         {campaignSettings && (() => {
           const lifetimeBudget = campaignSettings.daily_budget * campaignSettings.duration_days;
-          const isBudgetValid = lifetimeBudget >= MIN_LIFETIME_BUDGET_NGN;
-          const budgetShortfall = MIN_LIFETIME_BUDGET_NGN - lifetimeBudget;
-          const suggestedDaily = Math.ceil(MIN_LIFETIME_BUDGET_NGN / campaignSettings.duration_days);
 
           return (
             <div className="card">
@@ -600,26 +603,17 @@ export default function PreviewPage() {
                     <div className="budget-summary">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-400 text-sm">Lifetime Budget</span>
-                        <span className={`text-lg font-semibold ${isBudgetValid ? 'text-white' : 'text-red-400'}`}>
+                        <span className={`text-lg font-semibold ${budgetError ? 'text-red-400' : 'text-white'}`}>
                           {CURRENCY_SYMBOL}{lifetimeBudget.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-slate-500 text-xs">Minimum required</span>
-                        <span className="text-slate-500 text-xs">
-                          {CURRENCY_SYMBOL}{MIN_LIFETIME_BUDGET_NGN.toLocaleString()}
                         </span>
                       </div>
                     </div>
 
-                    {/* Budget Validation Message */}
-                    {!isBudgetValid && (
-                      <div className="budget-error">
-                        <p className="font-medium">Budget too low</p>
-                        <p className="mt-1">
-                          You need {CURRENCY_SYMBOL}{budgetShortfall.toLocaleString()} more.
-                          Try setting daily budget to {CURRENCY_SYMBOL}{suggestedDaily.toLocaleString()} or increase duration.
-                        </p>
+                    {/* Budget Error from Meta API */}
+                    {budgetError && (
+                      <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>{budgetError}</span>
                       </div>
                     )}
                   </div>
@@ -707,40 +701,24 @@ export default function PreviewPage() {
             </div>
           )}
 
-          {(() => {
-            const lifetimeBudget = (campaignSettings?.daily_budget || 0) * (campaignSettings?.duration_days || 0);
-            const isBudgetValid = lifetimeBudget >= MIN_LIFETIME_BUDGET_NGN;
-            const canDeploy = campaignSettings?.destination_url && isBudgetValid;
+          <button
+            className="btn-primary w-full flex items-center justify-center gap-2"
+            onClick={() => setShowDeployModal(true)}
+            disabled={deploying || !campaignSettings?.destination_url}
+          >
+            {deploying ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+            Deploy to Facebook
+          </button>
 
-            return (
-              <>
-                <button
-                  className="btn-primary w-full flex items-center justify-center gap-2"
-                  onClick={() => setShowDeployModal(true)}
-                  disabled={deploying || !canDeploy}
-                >
-                  {deploying ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                  Deploy to Facebook
-                </button>
-
-                {!campaignSettings?.destination_url && (
-                  <p className="text-xs text-red-400 mt-2">
-                    Please enter a destination URL before deploying
-                  </p>
-                )}
-
-                {campaignSettings?.destination_url && !isBudgetValid && (
-                  <p className="text-xs text-red-400 mt-2">
-                    Lifetime budget must be at least {CURRENCY_SYMBOL}{MIN_LIFETIME_BUDGET_NGN.toLocaleString()}
-                  </p>
-                )}
-              </>
-            );
-          })()}
+          {!campaignSettings?.destination_url && (
+            <p className="text-xs text-red-400 mt-2">
+              Please enter a destination URL before deploying
+            </p>
+          )}
         </div>
         </div>
       </div>

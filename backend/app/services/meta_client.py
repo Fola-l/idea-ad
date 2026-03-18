@@ -40,14 +40,14 @@ class MetaClient:
     RATE_LIMIT_CODES = {17, 613}
     RATE_LIMIT_SUBCODES = {2446079, 1487742}
 
-    # Minimum lifetime budget in kobo (NGN 108,300 = 10,830,000 kobo)
-    MIN_LIFETIME_BUDGET_KOBO = 10_830_000
-
     # Error subcode for deprecated interests
     DEPRECATED_INTEREST_SUBCODE = 1870247
 
     # Error subcode for unsupported city targeting
     CITY_TARGETING_NOT_SUPPORTED_SUBCODE = 1487479
+
+    # Error subcode for budget too low
+    BUDGET_TOO_LOW_SUBCODE = 1885272
 
     def __init__(self):
         settings = get_settings()
@@ -257,14 +257,6 @@ class MetaClient:
         url = f"{self.BASE_URL}/{self.ad_account_id}/adsets"
 
         lifetime_budget = int(settings.daily_budget * settings.duration_days * 100)
-
-        if lifetime_budget < self.MIN_LIFETIME_BUDGET_KOBO:
-            min_naira = self.MIN_LIFETIME_BUDGET_KOBO / 100
-            current_naira = lifetime_budget / 100
-            raise MetaAPIError(
-                f"Lifetime budget too low. Minimum is ₦{min_naira:,.0f} but got ₦{current_naira:,.0f}. "
-                f"Increase daily budget or duration."
-            )
 
         current_interests = resolved_interests.copy()
         skip_city_targeting = False

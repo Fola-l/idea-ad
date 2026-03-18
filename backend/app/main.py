@@ -331,11 +331,17 @@ async def deploy_ad(request: DeployRequest):
         )
 
     except MetaAPIError as e:
+        # For budget errors, use Meta's user-friendly message
+        if e.subcode == 1885272:  # Budget too low
+            error_msg = e.error_data.get("error_user_msg", e.message)
+        else:
+            error_msg = e.message
+
         await update_ad_run(request.job_id, {
             "status": "failed",
-            "error_message": f"Meta API Error: {e.message}"
+            "error_message": f"Meta API Error: {error_msg}"
         })
-        raise HTTPException(status_code=400, detail=e.message)
+        raise HTTPException(status_code=400, detail=error_msg)
 
     except Exception as e:
         await update_ad_run(request.job_id, {
