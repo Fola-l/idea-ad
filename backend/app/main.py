@@ -51,8 +51,29 @@ meta_client = MetaClient()
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for uptime monitoring."""
-    return {"status": "ok", "service": "idea-ad"}
+    """
+    Health check endpoint for uptime monitoring.
+    Also prevents Supabase free tier from pausing due to inactivity.
+    """
+    try:
+        # Query database to keep Supabase active
+        from app.db.supabase_client import get_db
+        db = get_db()
+        # Simple query to keep connection alive
+        db.table("ad_runs").select("id").limit(1).execute()
+
+        return {
+            "status": "ok",
+            "service": "idea-ad",
+            "database": "connected"
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "service": "idea-ad",
+            "database": "error",
+            "error": str(e)
+        }
 
 
 @app.post("/api/upload")
